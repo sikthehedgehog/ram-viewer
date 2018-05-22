@@ -1,0 +1,207 @@
+;****************************************************************************
+; EntryPoint
+; Where the program starts.
+;****************************************************************************
+
+EntryPoint:
+    move.w  #$2700, sr                  ; Disable interrupts
+    
+    move.b  (HwVersion), d7             ; Disable TMSS if needed
+    and.b   #$0F, d7
+    beq.s   @NoTmss
+    move.l  #'SEGA', (TmssPort)
+@NoTmss:
+    
+    move.b  #$40, (IoCtrl1)             ; Set up joypad ports
+    move.b  #$40, (IoData1)
+
+;----------------------------------------------------------------------------
+
+    lea     (VdpCtrl), a7
+    tst.w   (a7)                        ; Discard any pending VDP command
+    
+    move.w  #VDPREG_MODE1|$04, (a7)     ; Set up VDP registers
+    move.w  #VDPREG_MODE2|$04, (a7)
+    move.w  #VDPREG_MODE4|$81, (a7)
+    move.w  #VDPREG_MODE3|$00, (a7)
+    
+    move.w  #VDPREG_PLANEA|$38, (a7)
+    move.w  #VDPREG_PLANEB|$07, (a7)
+    move.w  #VDPREG_WINDOW|$00, (a7)
+    move.w  #VDPREG_SPRITE|$00, (a7)
+    move.w  #VDPREG_HSCROLL|$00, (a7)
+    
+    move.w  #VDPREG_MAPSIZE|$01, (a7)
+    move.w  #VDPREG_WINX|$00, (a7)
+    move.w  #VDPREG_WINY|$00, (a7)
+    
+    move.w  #VDPREG_AUTOINCR|$02, (a7)
+    move.w  #VDPREG_BGCOLOR|$00, (a7)
+    move.w  #VDPREG_HINTRATE|$FF, (a7)
+    
+    
+    move.l  #0, a6                      ; Clear VRAM
+    move.l  #$40000000, (a7)
+    move.w  #($10000/$20)-1, d7
+    lea     -4(a7), a7
+@ClearVram:
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    move.l  a6, (a7)
+    dbf     d7, @ClearVram
+    
+    move.l  #$40000000, 4(a7)           ; Load font
+    lea     (Font), a6
+    moveq   #38-1, d7
+@LoadFont:
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    move.l  (a6)+, (a7)
+    dbf     d7, @LoadFont
+    
+    move.l  #$C0000000, 4(a7)           ; Load palettes
+    move.w  #$0000, (a7)                ;
+    move.l  #$0EEE0444, (a7)            ; Palette 0 = white
+    move.l  #$C0220000, 4(a7)           ; Palette 1 = gray
+    move.l  #$0CAA0444, (a7)            ; Palette 2 = yellow
+    move.l  #$C0420000, 4(a7)
+    move.l  #$00CE0444, (a7)
+    
+    move.l  #$40000010, 4(a7)           ; Clear VSRAM
+    move.l  #$00000000, (a7)
+    
+    move.w  #VDPREG_MODE2|$44, 4(a7)    ; Turn on display
+
+;----------------------------------------------------------------------------
+
+    moveq   #0, d0                      ; Reset joypad input
+    moveq   #0, d1                      ; Reset initial address
+
+;****************************************************************************
+; IdleLoop
+; Where the program stays while idling.
+;****************************************************************************
+
+MainLoop:
+@VBlankWait1:                           ; Wait for next frame to start
+    btst    #3, (VdpCtrl+1)
+    beq.s   @VBlankWait1
+@VBlankWait2:
+    btst    #3, (VdpCtrl+1)
+    bne.s   @VBlankWait2
+
+;----------------------------------------------------------------------------
+
+    lea     (IoData1), a7               ; Read joypad input
+    move.b  #$40, (a7)
+    nop
+    nop
+    move.b  (a7), d0
+    move.b  #$00, (a7)
+    nop
+    nop
+    move.b  (a7), d7
+    
+    and.b   #$3F, d0                    ; Put all bits together
+    and.b   #$30, d7                    ; d7 = SACBRLDU
+    add.b   d7, d7
+    add.b   d7, d7
+    or.b    d7, d0
+    
+    not.b   d0                          ; Make button input high logic (i.e.
+                                        ; 1=pressed, 0=released)
+
+;----------------------------------------------------------------------------
+
+    moveq   #$10, d2                    ; Press A/B/C to scroll faster
+    btst    #6, d0                      ; The more buttons pressed, the
+    beq.s   @NoFastA                    ; faster it scrolls
+    lsl.w   #2, d2
+@NoFastA:
+    btst    #4, d0
+    beq.s   @NoFastB
+    lsl.w   #2, d2
+@NoFastB:
+    btst    #5, d0
+    beq.s   @NoFastC
+    lsl.w   #2, d2
+@NoFastC:
+    
+    btst    #1, d0                      ; Use D-pad to go up/down
+    beq.s   @NoDown
+    add.w   d2, d1
+@NoDown:
+    btst    #0, d0
+    beq.s   @NoUp
+    sub.w   d2, d1
+@NoUp:
+
+;----------------------------------------------------------------------------
+
+    lea     ($E00000), a0               ; Get pointer to chunk of RAM we
+    lea     (a0,d1.l), a0               ; want to view
+    move.w  d1, d2
+    
+    lea     (VdpData), a1
+    move.l  #$60840003, d3
+    
+    moveq   #26-1, d7
+@LoopY:
+    
+    move.l  d3, 4(a1)                   ; Draw address
+    moveq   #4-1, d6
+@AddrLoop:
+    rol.w   #4, d2
+    move.w  d2, d5
+    and.w   #$0F, d5
+    add.w   #$4001, d5
+    move.w  d5, (a1)
+    dbf     d6, @AddrLoop
+    
+    move.w  #$0000, d5                  ; Draw 16 bytes at this row
+    moveq   #16-1, d6
+@LoopX:
+    move.b  (a0)+, d4
+    rol.b   #4, d4
+    move.b  d4, d5
+    and.b   #$0F, d5
+    addq.b  #1, d5
+    move.w  d5, (a1)
+    rol.b   #4, d4
+    move.b  d4, d5
+    and.b   #$0F, d5
+    addq.b  #1, d5
+    move.w  d5, (a1)
+    eor.w   #$2000, d5
+    dbf     d6, @LoopX
+    
+    add.w   #$10, d2                    ; Onto next row
+    add.l   #$80<<16, d3
+    dbf     d7, @LoopY
+
+;----------------------------------------------------------------------------
+
+    bra     MainLoop
+
+;****************************************************************************
+; ErrorInt
+; Handler when the 68000 crashes.
+;****************************************************************************
+
+ErrorInt:
+    move.w  #$2700, sr                  ; Disable interrupts
+    
+    move.l  #$C0000000, (VdpCtrl)       ; Make screen red
+    move.w  #$00E, (VdpData)
+    
+    bra.s   *                           ; Hang up

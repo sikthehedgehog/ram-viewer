@@ -1,0 +1,22 @@
+;****************************************************************************
+; VDP registers
+;****************************************************************************
+
+VDPREG_MODE1        equ $8000           ; Video mode registers
+VDPREG_MODE2        equ $8100
+VDPREG_MODE3        equ $8B00
+VDPREG_MODE4        equ $8C00
+
+VDPREG_PLANEA       equ $8200           ; Nametable base addresses
+VDPREG_PLANEB       equ $8400
+VDPREG_WINDOW       equ $8300
+VDPREG_SPRITE       equ $8500
+VDPREG_HSCROLL      equ $8D00
+
+VDPREG_MAPSIZE      equ $9000           ; Plane A and B size
+VDPREG_WINX         equ $9100           ; Window X boundary
+VDPREG_WINY         equ $9200           ; Window Y boundary
+
+VDPREG_AUTOINCR     equ $8F00           ; Autoincrement
+VDPREG_BGCOLOR      equ $8700           ; Background color
+VDPREG_HINTRATE     equ $8A00           ; How often hblank IRQ fires

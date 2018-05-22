@@ -1,0 +1,43 @@
+;****************************************************************************
+; 68000 vectors
+;****************************************************************************
+
+    dc.l    $1000000, EntryPoint, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+    dc.l    ErrorInt, ErrorInt, ErrorInt, ErrorInt
+
+;****************************************************************************
+; Mega Drive header
+;****************************************************************************
+
+    dc.b    'SEGA MEGA DRIVE '
+    dc.b    '(C) SIK 2018.MAY'
+    dc.b    'RAM VIEWER'
+    dcb.b   $150-*, $20
+    dc.b    'RAM VIEWER'
+    dcb.b   $180-*, $20
+    dc.b    'TO SIK-RAMV-00'
+    dc.w    $0000
+    dc.b    'J'
+    dcb.b   $1A0-*, $20
+    dc.l    $000000, $3FFFFF
+    dc.l    $FF0000, $FFFFFF
+    dcb.b   $1F0-*, $20
+    dc.b    'JUE'
+    dcb.b   $200-*, $20
